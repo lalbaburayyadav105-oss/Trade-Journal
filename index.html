@@ -5,7 +5,7 @@
 *{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--t)}
 aside{position:fixed;inset:0 auto 0 0;width:230px;background:var(--c);border-right:1px solid var(--b);padding:14px;display:flex;flex-direction:column;gap:2px;overflow:auto;z-index:20;transition:.2s}
 aside a{padding:9px 12px;border-radius:8px;color:var(--m);cursor:pointer}aside a.on{background:#10b98122;color:var(--g);font-weight:600}
-.lg{font-weight:700;font-size:17px;padding:6px 8px 14px}main{margin-left:230px;padding:24px;max-width:1300px}
+.lg{font-weight:700;font-size:17px;padding:6px 8px 14px}main{margin-left:230px;padding:24px 32px;max-width:none}
 .card{background:var(--c);border:1px solid var(--b);border-radius:12px;padding:16px;margin-bottom:16px}.card h3{margin:0 0 12px;font-size:15px}
 .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}.g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
 .k{margin:0}.k small{color:var(--m);text-transform:uppercase;font-size:11px;letter-spacing:.04em}.k div{font-size:21px;font-weight:700;margin-top:4px}
@@ -16,17 +16,25 @@ label.f{display:flex;flex-direction:column;gap:4px}label.f span{font-size:12px;c
 table{width:100%;border-collapse:collapse}th{font-size:11px;color:var(--m);text-align:left;text-transform:uppercase}td,th{padding:9px 8px;border-bottom:1px solid var(--b);white-space:nowrap}tr.cl{cursor:pointer}tr.cl:hover{background:var(--i)}.tw{overflow-x:auto}
 .pill{padding:2px 9px;border-radius:99px;font-size:12px;background:var(--i)}.pill.Win{background:#10b98126;color:var(--g)}.pill.Loss{background:#ef444426;color:var(--r)}
 .dz{border:2px dashed var(--b);border-radius:12px;padding:26px;text-align:center;color:var(--m);cursor:pointer;margin-top:10px}.dz.ov{border-color:var(--g)}
-.th{width:120px;height:80px;object-fit:cover;border-radius:8px;cursor:zoom-in}
+.th{width:120px;height:80px;object-fit:cover;border-radius:8px;cursor:zoom-in}.th.big{width:min(100%,560px);height:auto;aspect-ratio:16/9;object-fit:contain;background:var(--i)}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.cd{min-height:62px;border-radius:8px;background:var(--i);padding:6px;cursor:pointer;font-size:12px;border:1px solid transparent}.cd.w{background:#10b98133}.cd.l{background:#ef444433}.cd.sel{border-color:var(--g)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between}.hd{margin-bottom:16px}.sp{margin-bottom:12px}
-#mb{display:none;margin-bottom:10px}#lb{position:fixed;inset:0;background:#000d;display:none;place-items:center;z-index:50}#lb img{max-width:94%;max-height:94%}
+#mb{display:none;margin-bottom:10px}#lb{position:fixed;inset:0;background:#000;display:none;place-items:center;z-index:50}#lb img{width:100vw;height:100vh;object-fit:contain}
 @media(max-width:860px){aside{transform:translateX(-100%)}aside.o{transform:none}main{margin:0;padding:14px}#mb{display:block}.cd{min-height:46px}}
 </style></head><body>
-<aside id="nav"></aside><main><button id="mb" data-x="menu">☰ Menu</button><div id="v"></div></main><div id="lb" data-x="lb"><img></div><input id="imp" type="file" accept=".json" hidden><input id="fi" type="file" accept="image/*" multiple hidden>
+<aside id="nav"></aside><main><button id="mb" data-x="menu">☰ Menu</button><div id="v"></div></main><div id="lb" data-x="lb"><img><b style="position:fixed;top:12px;right:22px;color:#fff;font-size:30px;cursor:pointer;text-shadow:0 0 6px #000">✕</b></div><input id="imp" type="file" accept=".json" hidden><input id="fi" type="file" accept="image/*" multiple hidden>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
+// ===== CLOUD SYNC: paste your Supabase values between the quotes (leave empty to use this browser only) =====
+const SB_URL='',SB_KEY='';
 const $=s=>document.querySelector(s);
-let S=JSON.parse(localStorage.tj||'{}');S.trades??=[];S.strats??=[];S.plan??={};S.les??=[];S.set??={theme:'dark',cur:'$',bal:''};
-const save=()=>{try{localStorage.tj=JSON.stringify(S)}catch(e){alert('Browser storage is full. Export a backup and remove some screenshots.')}};
+let S;const dbp=new Promise((res,rej)=>{const q=indexedDB.open('tj',1);q.onupgradeneeded=()=>q.result.createObjectStore('s');q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});
+const lsSave=()=>{try{localStorage.tj=JSON.stringify(S)}catch{alert('Storage full. Export a backup.')}};
+const saveLocal=()=>dbp.then(db=>{const tx=db.transaction('s','readwrite');tx.objectStore('s').put(S,'S');tx.onabort=()=>alert('Could not save (storage full?). Export a backup.')}).catch(lsSave);
+let sb,user,SM='',T,busy;const save=()=>{saveLocal();clearTimeout(T);T=setTimeout(sync,2500)};
+async function load(){let v,m;try{const db=await dbp;v=await new Promise(r=>{const q=db.transaction('s').objectStore('s').get('S');q.onsuccess=()=>r(q.result);q.onerror=()=>r()})}catch{}
+if(!v)try{v=JSON.parse(localStorage.tj);m=1}catch{}
+S=v||{};S.trades??=[];S.strats??=[];S.plan??={};S.les??=[];S.set??={theme:'dark',cur:'$',bal:''};navigator.storage?.persist?.();if(m)save()}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const f=(n,d=2)=>isFinite(n)?(+n).toFixed(d):'0',money=n=>(n<0?'-':'')+S.set.cur+Math.abs(n).toFixed(2),cls=n=>n>0?'g':n<0?'r':'',pfv=n=>n===Infinity?'∞':f(n);
@@ -50,8 +58,8 @@ return`<label class=f><span>${l}</span>${h}</label>`}
 const rd=fm=>{const o={};[...fm.elements].forEach(e=>{if(e.name)o[e.name]=e.type=='checkbox'?e.checked:e.value});return o};
 const CRY=/BTC|ETH|SOL|XRP|CRYPTO/;
 const autoMult=(a,mk)=>{a=String(a).toUpperCase();return a=='XAGUSD'?5000:a=='XAUUSD'?100:(mk=='Crypto'||CRY.test(a))?1:mk=='Forex'?100000:1};
-function calc(t){const e=+t.entry,x=+t.exit,sl=+t.sl,tp=+t.tp,sz=+t.size||0,m=+t.mult||autoMult(t.asset,t.market),d=t.dir=='Long'?1:-1,bal=+t.bal||0;
-const risk=Math.abs(e-sl)*sz*m,reward=tp?Math.abs(tp-e)*sz*m:0,pl=x?(x-e)*d*sz*m:0;
+function calc(t){const e=+t.entry||0,x=+t.exit||0,sl=+t.sl||0,tp=+t.tp||0,sz=+t.size||0,m=+t.mult||autoMult(t.asset,t.market),d=t.dir=='Long'?1:-1,bal=+t.bal||0;
+const risk=e&&sl?Math.abs(e-sl)*sz*m:0,reward=e&&tp?Math.abs(tp-e)*sz*m:0,pl=e&&x?(x-e)*d*sz*m:0;
 return{risk,reward,rr:risk?reward/risk:0,pl,pct:bal?pl/bal*100:0,rpct:bal?risk/bal*100:0,R:risk?pl/risk:0,res:Math.abs(pl)<1e-9?'BE':pl>0?'Win':'Loss'}}
 const ps=t=>(+t.conf+ +t.disc+(10-t.fear)+(10-t.greed))/4;
 const sorted=a=>[...a].sort((x,y)=>(x.date+(x.time||'')).localeCompare(y.date+(y.time||'')));
@@ -77,9 +85,9 @@ function dash(){const s=st(S.trades),h=head('Dashboard','Your trading performanc
 return h+`<div class=grid>`+[k('Total trades',s.n),k('Win rate',f(s.wr,1)+'%'),k('Total P/L',money(s.pl),cls(s.pl)),k('Profit factor',pfv(s.pf)),k('Winning',s.w,'g'),k('Losing',s.l,'r'),k('Breakeven',s.be),k('Avg R:R','1:'+f(s.rr)),k('Avg win',money(s.aw),'g'),k('Avg loss',money(s.al),'r'),k('Max drawdown',money(-s.dd),'r'),k('Streak',s.sk),k('Best trade',money(s.best),'g'),k('Worst trade',money(s.worst),'r')].join('')+`</div>`+card('Equity curve',line(s.a.map(t=>c+=t.pl)))+`<div class="grid g2">`+card('Monthly P/L',bars(plBy(s.a,t=>t.date.slice(0,7))))+card('Weekly P/L (week start)',bars(plBy(s.a,wk)))+card('Win / Loss / Breakeven',donut([['Wins',s.w,'#10b981'],['Losses',s.l,'#ef4444'],['BE',s.be,'#64748b']]))+card('Performance by strategy',bars(plBy(s.a,t=>t.strat||'–')))+`</div>`+card('Recent trades',ttable(s.a.slice(-8).reverse()))}
 let IM=[];
 const lcH=t=>{const c=calc(t);return`<div class=grid>${[['Risk amount',money(c.risk)],['Risk %',f(c.rpct)+'%'],['Potential reward',money(c.reward)],['Planned R:R','1:'+f(c.rr)],['Actual P/L',money(c.pl)],['P/L %',f(c.pct)+'%'],['R multiple',f(c.R)+'R'],['Result',c.res]].map(([a,b])=>k(a,b)).join('')}</div>`};
-const thumbs=()=>IM.map((m,i)=>`<div><img class=th src="${m.src}"><br><select data-c=${i} style="width:120px;margin-top:4px">${CATS.map(c=>`<option ${c==m.cat?'selected':''}>${c}</option>`).join('')}</select><br><a class=dng data-x=rmimg data-i=${i}>✕ Remove</a></div>`).join('');
+const thumbs=()=>IM.map((m,i)=>`<div><img class="th big" src="${m.src}"><br><select data-c=${i} style="width:120px;margin-top:4px">${CATS.map(c=>`<option ${c==m.cat?'selected':''}>${c}</option>`).join('')}</select><br><a class=dng data-x=rmimg data-i=${i}>✕ Remove</a></div>`).join('');
 const uploader=t=>card(t,`<select id=icat style="width:auto">${CATS.map(c=>`<option>${c}</option>`).join('')}</select><div class=dz id=dz>Drag &amp; drop, click to browse, or paste with Ctrl+V<br><small>Add as many charts as you want. Category above applies to new uploads; change it per image anytime.</small></div><div id=th class=row style="justify-content:flex-start;margin-top:10px">${thumbs()}</div>`);
-const shrink=fl=>new Promise(r=>{const i=new Image;i.onload=()=>{const s=Math.min(1,1000/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*s;c.height=i.height*s;c.getContext('2d').drawImage(i,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.65))};i.src=URL.createObjectURL(fl)});
+const shrink=fl=>new Promise(r=>{if(fl.size<5e6){const q=new FileReader;q.onload=()=>r(q.result);q.readAsDataURL(fl);return}const i=new Image;i.onload=()=>{const s=Math.min(1,3200/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*s;c.height=i.height*s;c.getContext('2d').drawImage(i,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.95))};i.src=URL.createObjectURL(fl)});
 async function addFiles(fs){for(const fl of fs)if(fl.type.startsWith('image/'))IM.push({cat:$('#icat').value,src:await shrink(fl)});$('#th').innerHTML=thumbs()}
 function add(id){const t=id?S.trades.find(x=>x.id==id):{date:today(),bal:S.set.bal,lev:1,mult:'',dir:'Long',market:'Forex',tf:'15m',sess:'London',conf:5,fear:3,greed:3,disc:7,followed:'Yes'};if(!t)return head('Not found','');IM=[...(t.imgs||[])];
 const F=(k,l,ty='text',o)=>field(k,l,ty,t[k],o),N=(k,l,r)=>F(k,l,'number','step=any '+(r||''));
@@ -100,7 +108,7 @@ function trade(id){const t=S.trades.find(x=>x.id==id);if(!t)return head('Not fou
 return head(`${esc(t.asset)} — ${t.dir}`,`${t.date} ${t.time||''} · ${t.market} · ${esc(t.strat)||'no strategy'}`,`<div><button data-go=hist>Back</button> <button data-x=edit data-id=${t.id}>Edit</button> <button class=dng data-x=del data-id=${t.id}>Delete</button></div>`)+
 `<div class=grid>${k('Net P/L',money(t.pl),cls(t.pl))}${k('R multiple',f(t.R)+'R',cls(t.R))}${k('Result',t.res)}${k('Planned R:R','1:'+f(t.rr))}${k('P/L %',f(t.pct)+'%',cls(t.pct))}${k('Followed plan',t.followed)}</div><div class="grid g2">`+
 card('Execution',kv([['Entry',t.entry],['Exit',t.exit],['Size',t.size],['Multiplier',t.mult||autoMult(t.asset,t.market)],['Leverage',t.lev+'x'],['Balance',money(+t.bal)],['Timeframe',t.tf],['Session',t.sess]]))+card('Risk management',kv([['Stop loss',t.sl],['Take profit',t.tp],['Risk amount',money(t.risk)],['Risk %',f(t.rpct)+'%'],['Potential reward',money(t.reward)],['Exit reason',t.exitReason]]))+`</div>`+
-card('Trade plan',tx(TXT.map(([a,b])=>[b,t[a]])))+card('Screenshots',t.imgs?.length?`<div class=row style="justify-content:flex-start">${t.imgs.map(m=>`<div><img class=th src="${m.src}"><br><small class=m>${m.cat}</small></div>`).join('')}</div>`:'<p class=m>No screenshots.</p>')+
+card('Trade plan',tx(TXT.map(([a,b])=>[b,t[a]])))+card('Screenshots',t.imgs?.length?`<div class=row style="justify-content:flex-start">${t.imgs.map(m=>`<div><img class="th big" src="${m.src}"><br><small class=m>${m.cat}</small></div>`).join('')}</div>`:'<p class=m>No screenshots.</p>')+
 card('Psychology',`<div class=grid>${k('Confidence',t.conf+'/10')}${k('Discipline',t.disc+'/10')}${k('Fear',t.fear+'/10')}${k('Greed',t.greed+'/10')}${k('Psych score',f(ps(t),1))}</div><p>Before: <b>${esc(t.eb)||'—'}</b> · During: <b>${esc(t.ed)||'—'}</b> · After: <b>${esc(t.ea)||'—'}</b></p><p>${FL.map(([a,b])=>`<span class=pill>${b}: ${t[a]?'Yes':'No'}</span>`).join(' ')}</p>${tx([['Notes',t.pnotes]])}`)+card('Review',tx([['Mistakes',t.mistakes],['Lessons learned',t.lessons]]))}
 let cm=new Date(),cs='';
 function cal(){const y=cm.getFullYear(),m=cm.getMonth(),fi=new Date(y,m,1).getDay(),dim=new Date(y,m+1,0).getDate(),by={};S.trades.forEach(t=>(by[t.date]??=[]).push(t));let c='';for(let i=0;i<fi;i++)c+='<div></div>';
@@ -112,10 +120,28 @@ return head('Analytics','Deep dive into your trading performance')+`<div class=g
 function psy(){const a=S.trades;if(!a.length)return head('Psychology','')+empty();const av=x=>f(a.reduce((s,t)=>s+ +t[x],0)/a.length,1),em=grp(a.filter(t=>t.eb),t=>t.eb.trim().toLowerCase()).map(([n,v])=>{const z=st(v);return`<tr><td>${esc(n)}</td><td>${z.n}</td><td>${f(z.wr,0)}%</td><td class="${cls(z.pl)}">${money(z.pl)}</td></tr>`});
 return head('Psychology','How your mindset connects to your results')+`<div class=grid>${k('Avg confidence',av('conf'))}${k('Avg discipline',av('disc'))}${k('Avg fear',av('fear'))}${k('Avg greed',av('greed'))}${k('Avg psych score',f(a.reduce((s,t)=>s+ps(t),0)/a.length,1))}</div><div class="grid g2">`+card('Rule-break flags (trades)',bars(FL.map(([x,l])=>[l,a.filter(t=>t[x]).length]).map(([l,n])=>[l,n]).map(x=>[x[0],x[1]])).replace(/var\(--r\)/g,'var(--g)'))+card('Emotion before trade → results',em.length?tbl(['Emotion','Trades','Win rate','P/L'],em):'<p class=m>Fill “Emotion before” on trades to see patterns.</p>')+`</div>`+card('Recent psychology entries',tbl(['Date','Asset','Before','During','After','Score','Result'],sorted(a).reverse().slice(0,15).map(t=>`<tr class=cl data-go="trade/${t.id}"><td>${t.date}</td><td>${esc(t.asset)}</td><td>${esc(t.eb)}</td><td>${esc(t.ed)}</td><td>${esc(t.ea)}</td><td>${f(ps(t),1)}</td><td><span class="pill ${t.res}">${t.res}</span></td></tr>`)))}
 function strat(id){if(id){const s=id=='new'?{}:S.strats.find(x=>x.id==id);if(!s)return head('Not found','');IM=[...(s.imgs||[])];return head(id=='new'?'New strategy':'Edit strategy','')+`<form id=sf data-id="${id=='new'?'':id}">`+card('',`<div class="grid g2">${SF.map(([a,b,c])=>field(a,b,c,s[a])).join('')}</div>`)+uploader('Example screenshots')+`<button class=pri>Save</button> <button type=button data-go=strat>Cancel</button></form>`}
-return head('Strategy library','Define your setups and see how each performs','<button class=pri data-go="strat/new">+ New strategy</button>')+(S.strats.length?S.strats.map(s=>{const z=st(S.trades.filter(t=>t.strat.toLowerCase()==s.name.toLowerCase()));return card(esc(s.name),`<p class=m>${esc(s.desc)}</p><div class=grid>${k('Trades',z.n)}${k('Win rate',f(z.wr,0)+'%')}${k('Total P/L',money(z.pl),cls(z.pl))}${k('Avg R:R','1:'+f(z.rr))}${k('Profit factor',pfv(z.pf))}</div><p>${SF.slice(2).filter(([a])=>s[a]).map(([a,b])=>`<b>${b}:</b> ${esc(s[a])}<br>`).join('')}</p><div class=row style="justify-content:flex-start">${(s.imgs||[]).map(m=>`<img class=th src="${m.src}">`).join('')}</div><p><button data-go="strat/${s.id}">Edit</button> <button class=dng data-x=dels data-id=${s.id}>Delete</button></p>`)}).join(''):card('No strategies yet','<p class=m>Create your first strategy.</p>'))}
+return head('Strategy library','Define your setups and see how each performs','<button class=pri data-go="strat/new">+ New strategy</button>')+(S.strats.length?S.strats.map(s=>{const z=st(S.trades.filter(t=>t.strat.toLowerCase()==s.name.toLowerCase()));return card(esc(s.name),`<p class=m>${esc(s.desc)}</p><div class=grid>${k('Trades',z.n)}${k('Win rate',f(z.wr,0)+'%')}${k('Total P/L',money(z.pl),cls(z.pl))}${k('Avg R:R','1:'+f(z.rr))}${k('Profit factor',pfv(z.pf))}</div><p>${SF.slice(2).filter(([a])=>s[a]).map(([a,b])=>`<b>${b}:</b> ${esc(s[a])}<br>`).join('')}</p><div class=row style="justify-content:flex-start">${(s.imgs||[]).map(m=>`<img class="th big" src="${m.src}">`).join('')}</div><p><button data-go="strat/${s.id}">Edit</button> <button class=dng data-x=dels data-id=${s.id}>Delete</button></p>`)}).join(''):card('No strategies yet','<p class=m>Create your first strategy.</p>'))}
 function plan(){return head('Trading plan','Your personal rules — edit and save anytime')+`<form id=pf>`+PL.map(([t,fs])=>card(t,`<div class="grid g2">${fs.map(([a,b])=>field(a,b,'area',S.plan[a])).join('')}</div>`)).join('')+`<button class=pri>Save plan</button></form>`}
 function les(){return head('Lessons & improvements','Your improvement journal')+`<form id=lf>`+card('New entry',`<div class="grid g2">${field('type','Type','sel','Daily',['Daily','Weekly','Monthly'])}${LF.map(([a,b])=>field(a,b,'area')).join('')}</div><br><button class=pri>Add entry</button>`)+`</form>`+[...S.les].reverse().map(l=>card(`${l.type} review · ${l.date}`,LF.filter(([a])=>l[a]).map(([a,b])=>`<p><b>${b}</b><br><span style="white-space:pre-wrap">${esc(l[a])}</span></p>`).join('')+`<a class=dng data-x=dell data-id=${l.id}>Delete</a>`)).join('')}
-function set(){return head('Settings','Appearance, currency, backup')+card('Preferences',`<div class=grid><label class=f><span>Theme</span><select data-s=theme><option value=dark ${S.set.theme=='dark'?'selected':''}>Dark</option><option value=light ${S.set.theme=='light'?'selected':''}>Light</option></select></label><label class=f><span>Currency symbol</span><input data-s=cur value="${esc(S.set.cur)}" maxlength=3></label><label class=f><span>Default account balance</span><input data-s=bal type=number value="${S.set.bal}"></label></div>`)+card('Your data (stored in this browser)',`<p class=m>Data lives in this browser only. Export a backup regularly.</p><button data-x=recalc>Recalculate all trades (auto multiplier)</button> <button class=pri data-x=exp>Export backup</button> <button data-x=imp>Import backup</button> <button class=dng data-x=wipe>Delete all data</button>`)}
+function set(){return head('Settings','Appearance, currency, backup')+card('Preferences',`<div class=grid><label class=f><span>Theme</span><select data-s=theme><option value=dark ${S.set.theme=='dark'?'selected':''}>Dark</option><option value=light ${S.set.theme=='light'?'selected':''}>Light</option></select></label><label class=f><span>Currency symbol</span><input data-s=cur value="${esc(S.set.cur)}" maxlength=3></label><label class=f><span>Default account balance</span><input data-s=bal type=number value="${S.set.bal}"></label></div>`)+cloud()+card('Your data (stored in this browser)',`<p class=m>Data lives in this browser only. Export a backup regularly.</p><button data-x=recalc>Recalculate all trades (auto multiplier)</button> <button class=pri data-x=exp>Export backup</button> <button data-x=imp>Import backup</button> <button class=dng data-x=wipe>Delete all data</button>`)}
+/* ---------- cloud sync (Supabase) ---------- */
+const LK={t:'trades',s:'strats',l:'les'},pObj=()=>({id:'plan',plan:S.plan,set:{cur:S.set.cur,bal:S.set.bal}});
+const h=o=>{const j=JSON.stringify(o);let a=5381;for(let i=0;i<j.length;i++)a=(a*33^j.charCodeAt(i))|0;return a+':'+j.length};
+const msg=t=>{SM=t;const e=$('#sm');if(e)e.textContent=t};
+async function cloudInit(){if(!SB_URL||!window.supabase)return;sb=supabase.createClient(SB_URL,SB_KEY);user=(await sb.auth.getSession()).data.session?.user||null;if(user)sync()}
+async function sync(){if(!sb||!user||busy)return;busy=1;try{msg('Syncing…');S.meta??={};const now=Date.now(),loc={};
+[...S.trades.map(o=>['t',o]),...S.strats.map(o=>['s',o]),...S.les.map(o=>['l',o]),['p',pObj()]].forEach(([k,o])=>{loc[o.id]=[k,o];const m=S.meta[o.id]??={};const x=h(o);if(m.h!=x){m.h=x;m.u=now;m.d=0}});
+for(const id in S.meta)if(!loc[id]&&!S.meta[id].d)S.meta[id]={h:'',u:now,d:1};
+let rem=[];for(let p=0;;p++){const{data,error}=await sb.from('recs').select('id,kind,u,deleted').range(p*1000,p*1000+999);if(error)throw error;rem.push(...data);if(data.length<1000)break}
+const rm={};rem.forEach(r=>rm[r.id]=r);
+for(const id in S.meta){const m=S.meta[id],r=rm[id];if(!r||m.u>r.u){const l=loc[id],{error}=await sb.from('recs').upsert({user_id:user.id,id,kind:l?l[0]:'x',data:m.d?null:l[1],u:m.u,deleted:!!m.d});if(error)throw error}}
+let ch=0;for(const r of rem){const m=S.meta[r.id];if(m&&r.u<=m.u)continue;let d=null;if(!r.deleted){const x=await sb.from('recs').select('data').eq('id',r.id).single();if(x.error)throw x.error;d=x.data.data}
+Object.values(LK).forEach(a=>S[a]=S[a].filter(o=>o.id!=r.id));
+if(d){if(r.kind=='p'){S.plan=d.plan||{};S.set.cur=d.set?.cur||S.set.cur;S.set.bal=d.set?.bal??S.set.bal}else S[LK[r.kind]].push(d)}
+S.meta[r.id]={h:d?h(r.kind=='p'?pObj():d):'',u:r.u,d:d?0:1};ch=1}
+saveLocal();msg('Synced '+new Date().toLocaleTimeString());if(ch&&!$('#tf,#sf,#lf'))go()}catch(e){msg('Sync error: '+(e.message||e))}busy=0}
+const cloud=()=>card('Cloud sync (phone + PC)',!SB_URL?'<p class=m>Not set up. Paste your Supabase URL and key at the top of index.html.</p>':user?`<p>Signed in as <b>${esc(user.email)}</b> · <span class=m id=sm>${esc(SM)}</span></p><button class=pri data-x=sync>Sync now</button> <button data-x=lo>Log out</button>`:`<div class=grid><input id=em type=email placeholder=Email><input id=pw type=password placeholder="Password (min 6 characters)"></div><br><button class=pri data-x=li>Log in</button> <button data-x=su>Sign up</button>`);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});
 /* ---------- app ---------- */
 const NAV=[['dash','Dashboard'],['add','Add Trade'],['hist','Trade History'],['cal','Calendar'],['ana','Analytics'],['psy','Psychology'],['strat','Strategy Library'],['plan','Trading Plan'],['les','Lessons'],['set','Settings']];
 $('#nav').innerHTML='<div class=lg>📈 TradeJournal</div>'+NAV.map(([p,l])=>`<a data-p=${p} data-go=${p}>${l}</a>`).join('')+'<a data-x=theme style="margin-top:auto">◐ Dark / Light</a>';
@@ -135,8 +161,11 @@ rmimg:()=>{IM.splice(d.i,1);$('#th').innerHTML=thumbs()},
 day:()=>{cs=d.d;go()},cm:()=>{cm=new Date(cm.getFullYear(),cm.getMonth()+ +d.n,1);go()},
 exp:()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='tradejournal-backup-'+today()+'.json';a.click()},
 imp:()=>$('#imp').click(),
+sync:()=>sync(),lo:async()=>{await sb.auth.signOut();user=null;go()},
+li:async()=>{const{error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error)return alert(error.message);user=(await sb.auth.getUser()).data.user;go();sync()},
+su:async()=>{const{data,error}=await sb.auth.signUp({email:$('#em').value.trim(),password:$('#pw').value});if(error)return alert(error.message);if(!data.session)return alert('Check your email to confirm your account, then log in.');user=data.user;go();sync()},
 recalc:()=>del('Recalculate every trade with automatic multipliers?',()=>S.trades=S.trades.map(t=>{t.mult='';if(CRY.test(String(t.asset).toUpperCase()))t.market='Crypto';return{...t,...calc(t)}})),
-wipe:()=>del('Delete ALL journal data? This cannot be undone.',()=>{S={trades:[],strats:[],plan:{},les:[],set:S.set}})}[d.x]||(()=>{}))()});
+wipe:()=>del('Delete ALL journal data? If cloud sync is on, it will also be deleted from the cloud. This cannot be undone.',()=>{S={trades:[],strats:[],plan:{},les:[],set:S.set}})}[d.x]||(()=>{}))()});
 document.addEventListener('input',e=>{const t=e.target;if(t.type=='range')t.closest('label').querySelector('b').textContent=t.value;
 if(t.closest('#tf')&&t.type!='range')$('#lc').innerHTML=lcH(rd(t.form));
 if(t.dataset.h!=null){H[t.dataset.h]=t.value;$('#tb').innerHTML=ttable(hfil(),1)}
@@ -153,5 +182,6 @@ const t={...(S.trades.find(x=>x.id==id)||{id:uid()}),...o,asset:o.asset.trim().t
 else if(fm.id=='sf'){if(!o.name.trim())return alert('Strategy name is required.');const s={...(S.strats.find(x=>x.id==id)||{id:uid()}),...o,imgs:[...IM]};S.strats=S.strats.filter(x=>x.id!=s.id).concat(s);save();location.hash='#/strat'}
 else if(fm.id=='pf'){S.plan=o;save();alert('Plan saved ✔')}
 else if(fm.id=='lf'){S.les.push({id:uid(),date:today(),...o});save();go()}});
-go();
+document.addEventListener('keydown',e=>{if(e.key=='Escape')$('#lb').style.display='none'});
+load().then(()=>{go();cloudInit()});
 </script></body></html>
